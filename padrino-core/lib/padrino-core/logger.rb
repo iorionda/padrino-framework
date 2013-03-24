@@ -70,7 +70,21 @@ module Padrino
           if args.size > 1
             bench(args[0], args[1], args[2], name)
           else
-            push(args * '', name)
+            begin
+              h = Hash[*args]
+              timestamp = "#{Time.now.instance_eval { '%s.%03d' % [strftime('%Y/%m/%d %H:%M:%S'), (usec / 1000.0).round] }}"
+              hostname = `hostname`.chop
+              session_id = h[:session_id]
+              pid = $$
+              remote_ip = h[:remote_ip]
+              uuid = h[:uuid]
+              params = h[:params] || "NULL"
+              msg = h[:message]
+              message = "[#{timestamp}][#{hostname}][#{session_id}][#{pid}][#{remote_ip}][#{uuid}][#{name}][#{params}][#{msg}]"
+              push(message, name)
+            rescue
+              push(args * '', name)
+            end
           end
         end
 
@@ -384,7 +398,11 @@ module Padrino
     alias :write :<<
 
     def format(message, level)
-      @format_message % [stylized_level(level), colorize(Time.now.strftime(@format_datetime), :yellow), message.to_s.strip]
+      if message.include?('[')
+        "%s" % [message]
+      else
+        @format_message % [stylized_level(level), colorize(Time.now.strftime(@format_datetime), :yellow), message.to_s.strip]
+      end
     end
 
     ##
